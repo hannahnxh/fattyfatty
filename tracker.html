@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Ledger">
+<title>Ledger — accountability tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #f6f2e9;
+    --paper-raised: #fbf8f2;
+    --ink: #23281f;
+    --ink-soft: #5c6152;
+    --ink-faint: #9a9c8d;
+    --rule: #d8d2c0;
+    --brass: #8a6d3b;
+    --brass-deep: #6b5329;
+    --sage: #5f7a55;
+    --sage-deep: #45573d;
+    --rust: #a8543a;
+    --rust-deep: #7c3d29;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'IBM Plex Mono', monospace;
+    padding: max(20px, env(safe-area-inset-top)) 16px calc(48px + env(safe-area-inset-bottom));
+    max-width: 480px;
+    margin: 0 auto;
+  }
+  h1, h2, .serif { font-family: 'Fraunces', serif; }
+  h1 {
+    font-size: 26px;
+    font-weight: 500;
+    margin: 4px 0 2px;
+    letter-spacing: -0.01em;
+  }
+  .tagline {
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin: 0 0 24px;
+  }
+  .card {
+    background: var(--paper-raised);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: 18px 18px 16px;
+    margin-bottom: 14px;
+  }
+  .row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+  }
+  .label {
+    font-size: 11px;
+    color: var(--ink-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .stat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .stat {
+    text-align: left;
+  }
+  .stat .num {
+    font-family: 'Fraunces', serif;
+    font-size: 30px;
+    font-weight: 500;
+    line-height: 1.1;
+    margin-top: 3px;
+  }
+  .stat .num.sage { color: var(--sage-deep); }
+  .stat .num.brass { color: var(--brass-deep); }
+  .divider {
+    border: none;
+    border-top: 1px solid var(--rule);
+    margin: 14px 0;
+  }
+  input, select {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 15px;
+    padding: 9px 10px;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    background: var(--paper);
+    color: var(--ink);
+    width: 100%;
+  }
+  input:focus, select:focus {
+    outline: none;
+    border-color: var(--brass);
+  }
+  label.field {
+    display: block;
+    font-size: 11px;
+    color: var(--ink-soft);
+    margin-bottom: 4px;
+  }
+  .field-wrap { margin-bottom: 12px; }
+  .field-pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  button {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 11px 16px;
+    border-radius: 2px;
+    border: 1px solid var(--ink);
+    background: var(--ink);
+    color: var(--paper);
+    cursor: pointer;
+    width: 100%;
+  }
+  button:active { transform: scale(0.99); }
+  button.secondary {
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--rule);
+  }
+  .setup-title {
+    font-size: 15px;
+    font-weight: 500;
+    margin: 0 0 14px;
+  }
+  .log-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .log-list li {
+    display: flex;
+    justify-content: space-between;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--rule);
+    font-size: 13.5px;
+  }
+  .log-list li:last-child { border-bottom: none; }
+  .log-date { color: var(--ink-soft); }
+  .log-delta { font-weight: 500; }
+  .log-delta.down { color: var(--sage-deep); }
+  .log-delta.up { color: var(--rust-deep); }
+  .log-delta.flat { color: var(--ink-faint); }
+  .chart-wrap { position: relative; width: 100%; height: 160px; margin-top: 4px; }
+  .stake-box {
+    background: rgba(138,109,59,0.08);
+    border: 1px solid rgba(138,109,59,0.3);
+    border-radius: 2px;
+    padding: 12px 14px;
+    font-size: 13.5px;
+    color: var(--brass-deep);
+    line-height: 1.5;
+  }
+
+  .empty {
+    font-size: 13px;
+    color: var(--ink-faint);
+    padding: 8px 0;
+  }
+  .top-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .top-actions button { width: auto; flex: 1; }
+  .err { color: var(--rust-deep); font-size: 12px; margin-top: 4px; display: none; }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div style="font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-faint);">Ledger — accountability</div>
+  <h1>Weight tracker</h1>
+  <p class="tagline">Honest numbers. Your stakes, your streak.</p>
+  <div id="content"></div>
+</div>
+
+<script>
+const STORAGE_KEY = 'ledger-tracker-state';
+let state = null;
+
+function todayStr() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function daysBetween(a, b) {
+  return Math.round((new Date(b) - new Date(a)) / 86400000);
+}
+function fmtDate(iso) {
+  const d = new Date(iso + 'T00:00:00');
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+async function load() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    state = raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    state = null;
+  }
+  render();
+}
+
+async function save() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (e) {
+    console.error('save failed', e);
+  }
+}
+
+function computeStreak() {
+  if (!state.logs.length) return 0;
+  const sorted = [...state.logs].sort((a,b) => new Date(b.date) - new Date(a.date));
+  const dates = new Set(sorted.map(l => l.date));
+  let streak = 0;
+  let cursor = new Date(todayStr() + 'T00:00:00');
+  // allow today to be unlogged yet without breaking streak, start check from most recent log day backward
+  let checkDate = dates.has(todayStr()) ? todayStr() : sorted[0].date;
+  // if most recent log isn't today or yesterday, streak is broken (0), unless it's today
+  const gapFromToday = daysBetween(sorted[0].date, todayStr());
+  if (gapFromToday > 1) return 0;
+  let d = new Date(sorted[0].date + 'T00:00:00');
+  while (dates.has(d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'))) {
+    streak++;
+    d.setDate(d.getDate() - 1);
+  }
+  return streak;
+}
+
+function render() {
+  const c = document.getElementById('content');
+  if (!state) {
+    c.innerHTML = setupView();
+    attachSetupHandlers();
+    return;
+  }
+  c.innerHTML = mainView();
+  attachMainHandlers();
+}
+
+function setupView() {
+  return `
+    <div class="card">
+      <div class="setup-title">Set up your tracker</div>
+      <div class="field-pair">
+        <div class="field-wrap">
+          <label class="field">Starting weight (kg)</label>
+          <input type="number" step="0.1" id="startWeight" placeholder="82">
+        </div>
+        <div class="field-wrap">
+          <label class="field">Goal weight (kg)</label>
+          <input type="number" step="0.1" id="goalWeight" placeholder="75">
+        </div>
+      </div>
+      <div class="field-wrap">
+        <label class="field">Height (cm) — optional, only used to show BMI</label>
+        <input type="number" step="0.1" id="height" placeholder="170">
+      </div>
+      <div class="field-wrap">
+        <label class="field">Daily calorie goal (optional)</label>
+        <input type="number" step="1" id="calorieGoal" placeholder="2000">
+      </div>
+      <div class="field-wrap">
+        <label class="field">Your stake — what's on the line if you skip logging (optional, just for you to see)</label>
+        <input type="text" id="stake" placeholder="e.g. 20 EUR to a friend, or a chore I hate">
+      </div>
+      <div class="err" id="setupErr">Enter both a starting and goal weight to continue.</div>
+      <button id="startBtn">Start tracking</button>
+    </div>
+  `;
+}
+
+function attachSetupHandlers() {
+  document.getElementById('startBtn').onclick = async () => {
+    const start = parseFloat(document.getElementById('startWeight').value);
+    const goal = parseFloat(document.getElementById('goalWeight').value);
+    const heightVal = parseFloat(document.getElementById('height').value);
+    const calorieGoalVal = parseFloat(document.getElementById('calorieGoal').value);
+    const stake = document.getElementById('stake').value.trim();
+    if (isNaN(start) || isNaN(goal)) {
+      document.getElementById('setupErr').style.display = 'block';
+      return;
+    }
+    state = {
+      startWeight: start,
+      goalWeight: goal,
+      heightCm: isNaN(heightVal) ? null : heightVal,
+      calorieGoal: isNaN(calorieGoalVal) ? null : calorieGoalVal,
+      stake: stake,
+      logs: [{ date: todayStr(), weight: start }],
+      calorieEntries: []
+    };
+    await save();
+    render();
+  };
+}
+
+function mainView() {
+  if (!state.calorieEntries) state.calorieEntries = [];
+  const streak = computeStreak();
+  const sorted = [...state.logs].sort((a,b) => new Date(a.date) - new Date(b.date));
+  const latest = sorted[sorted.length - 1];
+  const totalChange = latest.weight - state.startWeight;
+  const remaining = latest.weight - state.goalWeight;
+  const direction = state.goalWeight < state.startWeight ? -1 : 1;
+  const progressPct = Math.max(0, Math.min(100,
+    ((state.startWeight - latest.weight) * direction * -1 * -1) // placeholder, recompute below
+  ));
+  const totalNeeded = Math.abs(state.goalWeight - state.startWeight);
+  const madeSoFar = totalNeeded === 0 ? 100 : Math.max(0, Math.min(100, (Math.abs(latest.weight - state.startWeight) / totalNeeded) * 100));
+
+  const recentLogs = [...sorted].reverse().slice(0, 8);
+  const logRows = recentLogs.map((l, i) => {
+    const idx = sorted.indexOf(l);
+    const prev = idx > 0 ? sorted[idx - 1] : null;
+    let deltaHtml = '<span class="log-delta flat">first entry</span>';
+    if (prev) {
+      const d = +(l.weight - prev.weight).toFixed(1);
+      const cls = d < 0 ? 'down' : (d > 0 ? 'up' : 'flat');
+      const sign = d > 0 ? '+' : '';
+      deltaHtml = `<span class="log-delta ${cls}">${sign}${d} kg</span>`;
+    }
+    return `<li><span class="log-date">${fmtDate(l.date)}</span><span>${l.weight} kg &nbsp; ${deltaHtml}</span></li>`;
+  }).join('');
+
+  const chartSvg = buildChartSvg(sorted, state.goalWeight);
+
+  return `
+    <div class="card">
+      <div class="stat-grid">
+        <div class="stat">
+          <div class="label">Day streak</div>
+          <div class="num brass">${streak}</div>
+        </div>
+        <div class="stat">
+          <div class="label">Since start</div>
+          <div class="num sage">${totalChange > 0 ? '+' : ''}${totalChange.toFixed(1)} kg</div>
+        </div>
+      </div>
+      <hr class="divider">
+      <div class="row" style="margin-bottom: 6px;">
+        <span class="label">Toward goal</span>
+        <span style="font-size: 12px; color: var(--ink-soft);">${madeSoFar.toFixed(0)}%</span>
+      </div>
+      <div style="background: var(--rule); height: 6px; border-radius: 3px; overflow: hidden;">
+        <div style="background: var(--sage); height: 100%; width: ${madeSoFar}%;"></div>
+      </div>
+      <div style="font-size: 12px; color: var(--ink-soft); margin-top: 8px;">
+        ${latest.weight} kg now &nbsp;·&nbsp; ${state.goalWeight} kg goal &nbsp;·&nbsp; ${Math.abs(remaining).toFixed(1)} kg to go
+      </div>
+      ${state.heightCm ? `<div style="font-size: 12px; color: var(--ink-soft); margin-top: 4px;">BMI: ${(latest.weight / ((state.heightCm/100) ** 2)).toFixed(1)}</div>` : ''}
+    </div>
+
+    ${state.stake ? `
+    <div class="card">
+      <div class="label" style="margin-bottom: 8px;">Your stake</div>
+      <div class="stake-box">${escapeHtml(state.stake)}</div>
+    </div>` : ''}
+
+    <div class="card">
+      <div class="label" style="margin-bottom: 10px;">Log today's weight (kg)</div>
+      <div class="field-pair" style="grid-template-columns: 2fr 1fr;">
+        <input type="number" step="0.1" id="newWeight" placeholder="${latest.weight}">
+        <button id="logBtn" style="width:100%;">Log</button>
+      </div>
+      <div class="err" id="logErr">Enter a weight to log.</div>
+    </div>
+
+    ${calorieCard()}
+
+    <div class="card">
+      <div class="label" style="margin-bottom: 10px;">Trend</div>
+      <div class="chart-wrap">${chartSvg}</div>
+    </div>
+
+    <div class="card">
+      <div class="label" style="margin-bottom: 6px;">Recent entries</div>
+      ${recentLogs.length ? `<ul class="log-list">${logRows}</ul>` : '<div class="empty">No entries yet.</div>'}
+    </div>
+
+    <button class="secondary" id="resetBtn">Reset tracker</button>
+  `;
+}
+
+function calorieCard() {
+  if (!state.calorieEntries) state.calorieEntries = [];
+  const today = todayStr();
+  const todaysEntries = state.calorieEntries.filter(e => e.date === today);
+  const total = todaysEntries.reduce((s, e) => s + e.kcal, 0);
+  const goal = state.calorieGoal;
+  const pct = goal ? Math.max(0, Math.min(100, (total / goal) * 100)) : 0;
+  const rows = [...todaysEntries].reverse().map(e => `
+    <li>
+      <span class="log-date">${e.note ? escapeHtml(e.note) : 'entry'}</span>
+      <span>${e.kcal} kcal</span>
+    </li>
+  `).join('');
+  return `
+    <div class="card">
+      <div class="row" style="margin-bottom: 8px;">
+        <span class="label">Today's calories</span>
+        ${goal ? `<span style="font-size: 12px; color: var(--ink-soft);">${total} / ${goal} kcal</span>` : `<span style="font-size: 12px; color: var(--ink-soft);">${total} kcal</span>`}
+      </div>
+      ${goal ? `
+      <div style="background: var(--rule); height: 6px; border-radius: 3px; overflow: hidden; margin-bottom: 12px;">
+        <div style="background: ${total > goal ? 'var(--rust)' : 'var(--sage)'}; height: 100%; width: ${pct}%;"></div>
+      </div>` : '<div style="margin-bottom: 12px;"></div>'}
+      <div class="field-pair" style="grid-template-columns: 1fr 1fr 1fr;">
+        <input type="number" step="1" id="calorieAmount" placeholder="kcal">
+        <input type="text" id="calorieNote" placeholder="note (optional)">
+        <button id="calorieLogBtn" style="width:100%;">Add</button>
+      </div>
+      <div class="err" id="calorieErr">Enter a calorie amount.</div>
+      ${todaysEntries.length ? `<ul class="log-list" style="margin-top: 10px;">${rows}</ul>` : '<div class="empty">No entries yet today.</div>'}
+    </div>
+  `;
+}
+
+function buildChartSvg(sorted, goal) {
+  const w = 300, h = 140, padL = 30, padR = 10, padT = 10, padB = 20;
+  const weights = sorted.map(l => l.weight);
+  const allVals = [...weights, goal];
+  const min = Math.min(...allVals) - 1;
+  const max = Math.max(...allVals) + 1;
+  const range = max - min || 1;
+  const n = sorted.length;
+  const xStep = n > 1 ? (w - padL - padR) / (n - 1) : 0;
+  const xy = sorted.map((l, i) => {
+    const x = padL + i * xStep;
+    const y = padT + (1 - (l.weight - min) / range) * (h - padT - padB);
+    return [x, y];
+  });
+  const path = xy.map((p, i) => (i === 0 ? 'M' : 'L') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
+  const goalY = padT + (1 - (goal - min) / range) * (h - padT - padB);
+  const dots = xy.map(p => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="2.5" fill="#5f7a55" />`).join('');
+  return `
+    <svg viewBox="0 0 ${w} ${h}" width="100%" height="100%" role="img" aria-label="Line chart of weight over time trending toward goal">
+      <line x1="${padL}" y1="${goalY.toFixed(1)}" x2="${w-padR}" y2="${goalY.toFixed(1)}" stroke="#8a6d3b" stroke-width="1" stroke-dasharray="3,3" />
+      <text x="${w-padR}" y="${(goalY-4).toFixed(1)}" text-anchor="end" font-size="9" fill="#8a6d3b" font-family="IBM Plex Mono, monospace">goal</text>
+      <path d="${path}" fill="none" stroke="#45573d" stroke-width="2" />
+      ${dots}
+    </svg>
+  `;
+}
+
+function escapeHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function attachMainHandlers() {
+  document.getElementById('logBtn').onclick = async () => {
+    const val = parseFloat(document.getElementById('newWeight').value);
+    if (isNaN(val)) {
+      document.getElementById('logErr').style.display = 'block';
+      return;
+    }
+    const date = todayStr();
+    const existingIdx = state.logs.findIndex(l => l.date === date);
+    if (existingIdx >= 0) {
+      state.logs[existingIdx].weight = val;
+    } else {
+      state.logs.push({ date, weight: val });
+    }
+    await save();
+    render();
+  };
+  document.getElementById('resetBtn').onclick = async () => {
+    if (confirm('Reset all data? This clears your logs and stake.')) {
+      state = null;
+      await save();
+      render();
+    }
+  };
+  const calorieBtn = document.getElementById('calorieLogBtn');
+  if (calorieBtn) {
+    calorieBtn.onclick = async () => {
+      const amt = parseFloat(document.getElementById('calorieAmount').value);
+      const note = document.getElementById('calorieNote').value.trim();
+      if (isNaN(amt)) {
+        document.getElementById('calorieErr').style.display = 'block';
+        return;
+      }
+      if (!state.calorieEntries) state.calorieEntries = [];
+      state.calorieEntries.push({ date: todayStr(), kcal: amt, note });
+      await save();
+      render();
+    };
+  }
+}
+
+load();
+</script>
+
+</body>
+</html>
