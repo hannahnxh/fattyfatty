@@ -170,14 +170,28 @@
     color: var(--ink-faint);
     padding: 8px 0;
   }
-  .gym-entry {
-    padding: 8px 0;
-    border-bottom: 1px solid var(--rule);
+  .nav-tabs {
+    display: flex;
+    gap: 8px;
+    margin: 14px 0 22px;
   }
-  .gym-entry:last-child { border-bottom: none; }
-  .gym-exercise-name { font-weight: 500; font-size: 14px; margin-bottom: 2px; }
-  .gym-stats { font-size: 12px; color: var(--ink-soft); }
-  .gym-pr { background: rgba(138,109,59,0.08); padding: 6px 8px; border-radius: 2px; margin-top: 2px; font-size: 11px; color: var(--brass-deep); }
+  .nav-tab {
+    flex: 1;
+    text-align: center;
+    padding: 8px;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    text-decoration: none;
+    color: var(--ink-soft);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .nav-tab.active {
+    background: var(--ink);
+    color: var(--paper);
+    border-color: var(--ink);
+  }
   .top-actions {
     display: flex;
     gap: 8px;
@@ -193,6 +207,10 @@
   <div style="font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-faint);">Ledger — accountability</div>
   <h1>Weight tracker</h1>
   <p class="tagline">Honest numbers. Your stakes, your streak.</p>
+  <div class="nav-tabs">
+    <a href="index.html" class="nav-tab active">Weight</a>
+    <a href="gym.html" class="nav-tab">Gym</a>
+  </div>
   <div id="content"></div>
 </div>
 
@@ -393,11 +411,6 @@ function mainView() {
     ${calorieCard()}
 
     <div class="card">
-      <div class="label" style="margin-bottom: 10px;">Gym log</div>
-      ${gymCard()}
-    </div>
-
-    <div class="card">
       <div class="label" style="margin-bottom: 10px;">Weight trend</div>
       <div class="chart-wrap">${chartSvg}</div>
     </div>
@@ -409,58 +422,6 @@ function mainView() {
 
     <button class="secondary" id="resetBtn">Reset tracker</button>
   `;
-}
-
-function gymCard() {
-  const today = todayStr();
-  const todaysGym = state.gymEntries.filter(e => e.date === today);
-  const prs = computePersonalRecords();
-  
-  const rows = [...todaysGym].reverse().map(e => `
-    <div class="gym-entry">
-      <div class="gym-exercise-name">${escapeHtml(e.exercise)}</div>
-      <div class="gym-stats">${e.weight} kg × ${e.reps} reps × ${e.sets} sets</div>
-      ${prs[e.exercise] && prs[e.exercise].weight === e.weight ? '<div class="gym-pr">↑ Personal record!</div>' : ''}
-    </div>
-  `).join('');
-
-  return `
-    <div>
-      <div class="field-wrap">
-        <label class="field">Exercise</label>
-        <input type="text" id="gymExercise" placeholder="e.g. Bench press, Squat, Deadlift">
-      </div>
-      <div class="field-pair">
-        <div class="field-wrap">
-          <label class="field">Weight (kg)</label>
-          <input type="number" step="0.5" id="gymWeight" placeholder="60">
-        </div>
-        <div class="field-wrap">
-          <label class="field">Reps</label>
-          <input type="number" step="1" id="gymReps" placeholder="8">
-        </div>
-      </div>
-      <div class="field-pair">
-        <div class="field-wrap">
-          <label class="field">Sets</label>
-          <input type="number" step="1" id="gymSets" placeholder="3">
-        </div>
-        <button id="gymLogBtn" style="width:100%; align-self: flex-end;">Log</button>
-      </div>
-      <div class="err" id="gymErr">Enter exercise, weight, reps, and sets.</div>
-      ${todaysGym.length ? `<div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--rule);">${rows}</div>` : '<div class="empty">No gym entries yet today.</div>'}
-    </div>
-  `;
-}
-
-function computePersonalRecords() {
-  const prs = {};
-  state.gymEntries.forEach(e => {
-    if (!prs[e.exercise] || e.weight > prs[e.exercise].weight) {
-      prs[e.exercise] = { weight: e.weight, date: e.date };
-    }
-  });
-  return prs;
 }
 
 function calorieCard() {
@@ -565,23 +526,6 @@ function attachMainHandlers() {
       }
       if (!state.calorieEntries) state.calorieEntries = [];
       state.calorieEntries.push({ date: todayStr(), kcal: amt, note });
-      await save();
-      render();
-    };
-  }
-  const gymBtn = document.getElementById('gymLogBtn');
-  if (gymBtn) {
-    gymBtn.onclick = async () => {
-      const exercise = document.getElementById('gymExercise').value.trim();
-      const weight = parseFloat(document.getElementById('gymWeight').value);
-      const reps = parseFloat(document.getElementById('gymReps').value);
-      const sets = parseFloat(document.getElementById('gymSets').value);
-      if (!exercise || isNaN(weight) || isNaN(reps) || isNaN(sets)) {
-        document.getElementById('gymErr').style.display = 'block';
-        return;
-      }
-      if (!state.gymEntries) state.gymEntries = [];
-      state.gymEntries.push({ date: todayStr(), exercise, weight, reps, sets });
       await save();
       render();
     };

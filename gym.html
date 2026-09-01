@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Ledger">
+<title>Ledger — gym tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #f6f2e9;
+    --paper-raised: #fbf8f2;
+    --ink: #23281f;
+    --ink-soft: #5c6152;
+    --ink-faint: #9a9c8d;
+    --rule: #d8d2c0;
+    --brass: #8a6d3b;
+    --brass-deep: #6b5329;
+    --sage: #5f7a55;
+    --sage-deep: #45573d;
+    --rust: #a8543a;
+    --rust-deep: #7c3d29;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'IBM Plex Mono', monospace;
+    padding: max(20px, env(safe-area-inset-top)) 16px calc(48px + env(safe-area-inset-bottom));
+    max-width: 480px;
+    margin: 0 auto;
+  }
+  h1, h2, .serif { font-family: 'Fraunces', serif; }
+  h1 {
+    font-size: 26px;
+    font-weight: 500;
+    margin: 4px 0 2px;
+    letter-spacing: -0.01em;
+  }
+  .tagline {
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin: 0 0 4px;
+  }
+  .nav-tabs {
+    display: flex;
+    gap: 8px;
+    margin: 14px 0 22px;
+  }
+  .nav-tab {
+    flex: 1;
+    text-align: center;
+    padding: 8px;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    text-decoration: none;
+    color: var(--ink-soft);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .nav-tab.active {
+    background: var(--ink);
+    color: var(--paper);
+    border-color: var(--ink);
+  }
+  .card {
+    background: var(--paper-raised);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: 18px 18px 16px;
+    margin-bottom: 14px;
+  }
+  .label {
+    font-size: 11px;
+    color: var(--ink-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .divider {
+    border: none;
+    border-top: 1px solid var(--rule);
+    margin: 14px 0;
+  }
+  input {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 15px;
+    padding: 9px 10px;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    background: var(--paper);
+    color: var(--ink);
+    width: 100%;
+  }
+  input:focus {
+    outline: none;
+    border-color: var(--brass);
+  }
+  label.field {
+    display: block;
+    font-size: 11px;
+    color: var(--ink-soft);
+    margin-bottom: 4px;
+  }
+  .field-wrap { margin-bottom: 12px; }
+  .field-pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  button {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 11px 16px;
+    border-radius: 2px;
+    border: 1px solid var(--ink);
+    background: var(--ink);
+    color: var(--paper);
+    cursor: pointer;
+    width: 100%;
+  }
+  button:active { transform: scale(0.99); }
+  button.secondary {
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--rule);
+  }
+  .empty {
+    font-size: 13px;
+    color: var(--ink-faint);
+    padding: 8px 0;
+  }
+  .gym-entry {
+    padding: 8px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .gym-entry:last-child { border-bottom: none; }
+  .gym-entry-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .gym-exercise-name { font-weight: 500; font-size: 14px; margin-bottom: 2px; }
+  .gym-date { font-size: 11px; color: var(--ink-faint); }
+  .gym-stats { font-size: 12px; color: var(--ink-soft); }
+  .gym-pr { background: rgba(138,109,59,0.08); padding: 6px 8px; border-radius: 2px; margin-top: 4px; font-size: 11px; color: var(--brass-deep); }
+  .pr-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--rule);
+    font-size: 13.5px;
+  }
+  .pr-row:last-child { border-bottom: none; }
+  .pr-weight { font-weight: 500; color: var(--brass-deep); }
+  .err { color: var(--rust-deep); font-size: 12px; margin-top: 4px; display: none; }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div style="font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-faint);">Ledger — accountability</div>
+  <h1>Gym tracker</h1>
+  <p class="tagline">Log sets, watch your PRs climb.</p>
+  <div class="nav-tabs">
+    <a href="index.html" class="nav-tab">Weight</a>
+    <a href="gym.html" class="nav-tab active">Gym</a>
+  </div>
+  <div id="content"></div>
+</div>
+
+<script>
+const STORAGE_KEY = 'ledger-tracker-state';
+let state = null;
+
+function todayStr() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function fmtDate(iso) {
+  const d = new Date(iso + 'T00:00:00');
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+function escapeHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+async function load() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    state = raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    state = null;
+  }
+  render();
+}
+
+async function save() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (e) {
+    console.error('save failed', e);
+  }
+}
+
+function render() {
+  const c = document.getElementById('content');
+  if (!state) {
+    c.innerHTML = noSetupView();
+    return;
+  }
+  if (!state.gymEntries) state.gymEntries = [];
+  c.innerHTML = mainView();
+  attachHandlers();
+}
+
+function noSetupView() {
+  return `
+    <div class="card">
+      <div class="label" style="margin-bottom: 8px;">Not set up yet</div>
+      <p style="font-size: 13.5px; color: var(--ink-soft); margin: 0 0 14px;">
+        Set up your tracker on the Weight page first — the gym log shares the same tracker.
+      </p>
+      <a href="index.html"><button>Go to Weight tracker</button></a>
+    </div>
+  `;
+}
+
+function computePersonalRecords() {
+  const prs = {};
+  state.gymEntries.forEach(e => {
+    if (!prs[e.exercise] || e.weight > prs[e.exercise].weight) {
+      prs[e.exercise] = { weight: e.weight, reps: e.reps, date: e.date };
+    }
+  });
+  return prs;
+}
+
+function mainView() {
+  const today = todayStr();
+  const todaysGym = state.gymEntries.filter(e => e.date === today);
+  const prs = computePersonalRecords();
+  const prEntries = Object.entries(prs).sort((a, b) => a[0].localeCompare(b[0]));
+
+  const todayRows = [...todaysGym].reverse().map(e => `
+    <div class="gym-entry">
+      <div class="gym-entry-top">
+        <div class="gym-exercise-name">${escapeHtml(e.exercise)}</div>
+      </div>
+      <div class="gym-stats">${e.weight} kg × ${e.reps} reps × ${e.sets} sets</div>
+      ${prs[e.exercise] && prs[e.exercise].weight === e.weight ? '<div class="gym-pr">↑ Personal record!</div>' : ''}
+    </div>
+  `).join('');
+
+  const history = [...state.gymEntries]
+    .filter(e => e.date !== today)
+    .sort((a, b) => new Date(b.date) - new Date(a.date))
+    .slice(0, 20);
+  const historyRows = history.map(e => `
+    <div class="gym-entry">
+      <div class="gym-entry-top">
+        <div class="gym-exercise-name">${escapeHtml(e.exercise)}</div>
+        <div class="gym-date">${fmtDate(e.date)}</div>
+      </div>
+      <div class="gym-stats">${e.weight} kg × ${e.reps} reps × ${e.sets} sets</div>
+    </div>
+  `).join('');
+
+  const prRows = prEntries.map(([exercise, pr]) => `
+    <div class="pr-row">
+      <span>${escapeHtml(exercise)}</span>
+      <span class="pr-weight">${pr.weight} kg × ${pr.reps}</span>
+    </div>
+  `).join('');
+
+  return `
+    <div class="card">
+      <div class="label" style="margin-bottom: 10px;">Log a set</div>
+      <div class="field-wrap">
+        <label class="field">Exercise</label>
+        <input type="text" id="gymExercise" placeholder="e.g. Bench press, Squat, Deadlift">
+      </div>
+      <div class="field-pair">
+        <div class="field-wrap">
+          <label class="field">Weight (kg)</label>
+          <input type="number" step="0.5" id="gymWeight" placeholder="60">
+        </div>
+        <div class="field-wrap">
+          <label class="field">Reps</label>
+          <input type="number" step="1" id="gymReps" placeholder="8">
+        </div>
+      </div>
+      <div class="field-pair">
+        <div class="field-wrap">
+          <label class="field">Sets</label>
+          <input type="number" step="1" id="gymSets" placeholder="3">
+        </div>
+        <button id="gymLogBtn" style="width:100%; align-self: flex-end;">Log</button>
+      </div>
+      <div class="err" id="gymErr">Enter exercise, weight, reps, and sets.</div>
+    </div>
+
+    <div class="card">
+      <div class="label" style="margin-bottom: 10px;">Today's session</div>
+      ${todaysGym.length ? todayRows : '<div class="empty">No sets logged yet today.</div>'}
+    </div>
+
+    <div class="card">
+      <div class="label" style="margin-bottom: 10px;">Personal records</div>
+      ${prEntries.length ? prRows : '<div class="empty">No records yet — log a set to start.</div>'}
+    </div>
+
+    <div class="card">
+      <div class="label" style="margin-bottom: 10px;">Recent history</div>
+      ${history.length ? historyRows : '<div class="empty">No earlier sessions yet.</div>'}
+    </div>
+  `;
+}
+
+function attachHandlers() {
+  const gymBtn = document.getElementById('gymLogBtn');
+  if (gymBtn) {
+    gymBtn.onclick = async () => {
+      const exercise = document.getElementById('gymExercise').value.trim();
+      const weight = parseFloat(document.getElementById('gymWeight').value);
+      const reps = parseFloat(document.getElementById('gymReps').value);
+      const sets = parseFloat(document.getElementById('gymSets').value);
+      if (!exercise || isNaN(weight) || isNaN(reps) || isNaN(sets)) {
+        document.getElementById('gymErr').style.display = 'block';
+        return;
+      }
+      state.gymEntries.push({ date: todayStr(), exercise, weight, reps, sets });
+      await save();
+      render();
+    };
+  }
+}
+
+load();
+</script>
+
+</body>
+</html>
