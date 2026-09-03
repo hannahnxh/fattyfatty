@@ -104,6 +104,18 @@
     outline: none;
     border-color: var(--brass);
   }
+  textarea {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    padding: 9px 10px;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    background: var(--paper);
+    color: var(--ink);
+    width: 100%;
+    resize: vertical;
+  }
+  textarea:focus { outline: none; border-color: var(--brass); }
   label.field {
     display: block;
     font-size: 11px;
@@ -413,6 +425,27 @@ function mainView() {
       ${recentLogs.length ? `<ul class="log-list">${logRows}</ul>` : '<div class="empty">No entries yet.</div>'}
     </div>
 
+    <div class="card">
+      <div class="label" style="margin-bottom: 10px;">Backup &amp; restore</div>
+      <p style="font-size: 12px; color: var(--ink-soft); margin: 0 0 12px;">
+        Covers everything — weigh-ins, gym log, stake. Export and copy the text somewhere safe before removing the app from your Home Screen, then Import it back afterwards.
+      </p>
+      <div class="top-actions" style="margin-top: 0;">
+        <button class="secondary" id="exportBtn">Export</button>
+        <button class="secondary" id="importToggleBtn">Import</button>
+      </div>
+      <div id="exportWrap" style="display:none; margin-top: 12px;">
+        <textarea id="exportBox" readonly rows="4"></textarea>
+        <button class="secondary" id="copyBtn" style="margin-top: 8px;">Copy to clipboard</button>
+        <div id="copyMsg" style="font-size: 12px; color: var(--sage-deep); margin-top: 6px; display: none;">Copied.</div>
+      </div>
+      <div id="importWrap" style="display:none; margin-top: 12px;">
+        <textarea id="importBox" rows="4" placeholder="Paste your exported backup here"></textarea>
+        <button id="importBtn" style="margin-top: 8px;">Replace data with this backup</button>
+        <div class="err" id="importErr">That doesn't look like a valid backup.</div>
+      </div>
+    </div>
+
     <button class="secondary" id="resetBtn">Reset tracker</button>
   `;
 }
@@ -474,6 +507,69 @@ function attachMainHandlers() {
       render();
     }
   };
+
+  const exportBtn = document.getElementById('exportBtn');
+  if (exportBtn) {
+    exportBtn.onclick = () => {
+      const wrap = document.getElementById('exportWrap');
+      const box = document.getElementById('exportBox');
+      box.value = JSON.stringify(state);
+      const show = wrap.style.display === 'none';
+      wrap.style.display = show ? 'block' : 'none';
+      document.getElementById('importWrap').style.display = 'none';
+      if (show) { box.focus(); box.select(); }
+    };
+  }
+
+  const copyBtn = document.getElementById('copyBtn');
+  if (copyBtn) {
+    copyBtn.onclick = async () => {
+      const box = document.getElementById('exportBox');
+      box.focus();
+      box.select();
+      try {
+        await navigator.clipboard.writeText(box.value);
+      } catch (e) {
+        try { document.execCommand('copy'); } catch (e2) {}
+      }
+      const msg = document.getElementById('copyMsg');
+      msg.style.display = 'block';
+      setTimeout(() => { msg.style.display = 'none'; }, 2000);
+    };
+  }
+
+  const importToggleBtn = document.getElementById('importToggleBtn');
+  if (importToggleBtn) {
+    importToggleBtn.onclick = () => {
+      const wrap = document.getElementById('importWrap');
+      wrap.style.display = wrap.style.display === 'none' ? 'block' : 'none';
+      document.getElementById('exportWrap').style.display = 'none';
+      document.getElementById('importErr').style.display = 'none';
+    };
+  }
+
+  const importBtn = document.getElementById('importBtn');
+  if (importBtn) {
+    importBtn.onclick = async () => {
+      const raw = document.getElementById('importBox').value.trim();
+      let parsed;
+      try {
+        parsed = JSON.parse(raw);
+      } catch (e) {
+        document.getElementById('importErr').style.display = 'block';
+        return;
+      }
+      if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.logs)) {
+        document.getElementById('importErr').style.display = 'block';
+        return;
+      }
+      if (!confirm('Replace all current data with this backup? This cannot be undone.')) return;
+      state = parsed;
+      if (!Array.isArray(state.gymEntries)) state.gymEntries = [];
+      await save();
+      render();
+    };
+  }
 }
 
 load();
