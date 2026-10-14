@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Calories">
+<title>Calorie Tracker</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #f6f2e9;
+    --paper-raised: #fbf8f2;
+    --ink: #23281f;
+    --ink-soft: #5c6152;
+    --ink-faint: #9a9c8d;
+    --rule: #d8d2c0;
+    --brass: #8a6d3b;
+    --brass-deep: #6b5329;
+    --sage: #5f7a55;
+    --sage-deep: #45573d;
+    --rust: #a8543a;
+    --rust-deep: #7c3d29;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'IBM Plex Mono', monospace;
+    padding: max(20px, env(safe-area-inset-top)) 16px calc(48px + env(safe-area-inset-bottom));
+    max-width: 480px;
+    margin: 0 auto;
+  }
+  h1, h2, .serif { font-family: 'Fraunces', serif; }
+  h1 {
+    font-size: 26px;
+    font-weight: 500;
+    margin: 4px 0 2px;
+    letter-spacing: -0.01em;
+  }
+  .tagline {
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin: 0 0 24px;
+  }
+  .card {
+    background: var(--paper-raised);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: 18px 18px 16px;
+    margin-bottom: 14px;
+  }
+  .row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+  }
+  .label {
+    font-size: 11px;
+    color: var(--ink-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .stat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .stat {
+    text-align: left;
+  }
+  .stat .num {
+    font-family: 'Fraunces', serif;
+    font-size: 30px;
+    font-weight: 500;
+    line-height: 1.1;
+    margin-top: 3px;
+  }
+  .stat .num.sage { color: var(--sage-deep); }
+  .stat .num.brass { color: var(--brass-deep); }
+  .divider {
+    border: none;
+    border-top: 1px solid var(--rule);
+    margin: 14px 0;
+  }
+  input, select {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 15px;
+    padding: 9px 10px;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    background: var(--paper);
+    color: var(--ink);
+    width: 100%;
+  }
+  input:focus, select:focus {
+    outline: none;
+    border-color: var(--brass);
+  }
+  label.field {
+    display: block;
+    font-size: 11px;
+    color: var(--ink-soft);
+    margin-bottom: 4px;
+  }
+  .field-wrap { margin-bottom: 12px; }
+  .field-pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  button {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 11px 16px;
+    border-radius: 2px;
+    border: 1px solid var(--ink);
+    background: var(--ink);
+    color: var(--paper);
+    cursor: pointer;
+    width: 100%;
+  }
+  button:active { transform: scale(0.99); }
+  button.secondary {
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--rule);
+  }
+  .setup-title {
+    font-size: 15px;
+    font-weight: 500;
+    margin: 0 0 14px;
+  }
+  .log-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .log-list li {
+    display: flex;
+    justify-content: space-between;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--rule);
+    font-size: 13.5px;
+  }
+  .log-list li:last-child { border-bottom: none; }
+  .log-date { color: var(--ink-soft); }
+  .log-delta { font-weight: 500; }
+  .err { color: var(--rust-deep); font-size: 12px; margin-top: 4px; display: none; }
+  .empty {
+    font-size: 13px;
+    color: var(--ink-faint);
+    padding: 8px 0;
+  }
+  .circle-container {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 20px 0;
+  }
+  .circle-svg {
+    width: 160px;
+    height: 160px;
+    flex-shrink: 0;
+  }
+  .circle-breakdown {
+    flex: 1;
+  }
+  .circle-label {
+    font-size: 12px;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-top: 12px;
+  }
+  .month-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+  .month-header button {
+    width: auto;
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+  .month-title {
+    font-family: 'Fraunces', serif;
+    font-size: 16px;
+    font-weight: 500;
+  }
+  .calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+  .cal-day-header {
+    text-align: center;
+    font-size: 10px;
+    color: var(--ink-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 4px 0;
+  }
+  .cal-day {
+    aspect-ratio: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    border: 1px solid var(--rule);
+    background: var(--paper);
+    font-size: 11px;
+    color: var(--ink-soft);
+    cursor: pointer;
+    position: relative;
+  }
+  .cal-day.empty {
+    opacity: 0.3;
+    cursor: default;
+  }
+  .cal-day.under {
+    background: #e8f5e9;
+    border-color: #5f7a55;
+  }
+  .cal-day.over {
+    background: #ffebee;
+    border-color: #a8543a;
+  }
+  .cal-day-num {
+    font-weight: 500;
+    color: var(--ink);
+    font-size: 12px;
+  }
+  .cal-day.under .cal-day-num {
+    color: #45573d;
+  }
+  .cal-day.over .cal-day-num {
+    color: #7c3d29;
+  }
+  .nav-tabs {
+    display: flex;
+    gap: 8px;
+    margin: 14px 0 22px;
+  }
+  .nav-tab {
+    flex: 1;
+    text-align: center;
+    padding: 8px;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    text-decoration: none;
+    color: var(--ink-soft);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .nav-tab.active {
+    background: var(--ink);
+    color: var(--paper);
+    border-color: var(--ink);
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div style="font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-faint);">Tracker — calories</div>
+  <h1>Daily log</h1>
+  <p class="tagline">Track what you eat, keep your streak.</p>
+  <div class="nav-tabs">
+    <a href="index.html" class="nav-tab">Weight</a>
+    <a href="gym.html" class="nav-tab">Gym</a>
+    <a href="calorie-tracker.html" class="nav-tab active">Calories</a>
+  </div>
+  <div id="content"></div>
+</div>
+
+<script>
+const STORAGE_KEY = 'calorie-tracker-state';
+let state = null;
+
+function todayStr() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function daysBetween(a, b) {
+  return Math.round((new Date(b) - new Date(a)) / 86400000);
+}
+
+function fmtDate(iso) {
+  const d = new Date(iso + 'T00:00:00');
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+async function load() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    state = raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    state = null;
+  }
+  render();
+}
+
+async function save() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (e) {
+    console.error('save failed', e);
+  }
+}
+
+function computeCalorieStreak() {
+  if (!state.entries.length) return 0;
+  const dateSet = new Set(state.entries.map(e => e.date));
+  const sortedDates = [...dateSet].sort((a,b) => new Date(b) - new Date(a));
+  const gapFromToday = daysBetween(sortedDates[0], todayStr());
+  if (gapFromToday > 1) return 0;
+  let streak = 0;
+  let d = new Date(sortedDates[0] + 'T00:00:00');
+  while (dateSet.has(d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'))) {
+    streak++;
+    d.setDate(d.getDate() - 1);
+  }
+  return streak;
+}
+
+function getMonthCalendar(year, month) {
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  const daysInMonth = lastDay.getDate();
+  const startingDayOfWeek = firstDay.getDay();
+
+  const days = [];
+  for (let i = 0; i < startingDayOfWeek; i++) {
+    days.push(null);
+  }
+  for (let i = 1; i <= daysInMonth; i++) {
+    days.push(i);
+  }
+  return days;
+}
+
+function getDayStatus(year, month, day) {
+  const dateStr = year + '-' + String(month + 1).padStart(2,'0') + '-' + String(day).padStart(2,'0');
+  const dayEntries = state.entries.filter(e => e.date === dateStr);
+  if (!dayEntries.length) return 'empty';
+  const total = dayEntries.reduce((s, e) => s + e.kcal, 0);
+  return total > state.goal ? 'over' : 'under';
+}
+
+function renderMonthCalendar(year, month) {
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const days = getMonthCalendar(year, month);
+
+  let html = `
+    <div class="month-header">
+      <button id="prevMonthBtn" class="secondary" style="width: auto; padding: 6px 10px; font-size: 12px;">← Prev</button>
+      <span class="month-title">${monthNames[month]} ${year}</span>
+      <button id="nextMonthBtn" class="secondary" style="width: auto; padding: 6px 10px; font-size: 12px;">Next →</button>
+    </div>
+    <div class="calendar-grid">
+  `;
+
+  dayNames.forEach(name => {
+    html += `<div class="cal-day-header">${name}</div>`;
+  });
+
+  days.forEach(day => {
+    if (day === null) {
+      html += `<div class="cal-day empty"></div>`;
+    } else {
+      const status = getDayStatus(year, month, day);
+      html += `<div class="cal-day ${status}" data-date="${year}-${String(month + 1).padStart(2,'0')}-${String(day).padStart(2,'0')}">
+        <div class="cal-day-num">${day}</div>
+      </div>`;
+    }
+  });
+
+  html += `</div>`;
+  return html;
+}
+
+function render() {
+  const c = document.getElementById('content');
+  if (!state) {
+    c.innerHTML = setupView();
+    attachSetupHandlers();
+    return;
+  }
+  c.innerHTML = mainView();
+  attachMainHandlers();
+}
+
+function setupView() {
+  return `
+    <div class="card">
+      <div class="setup-title">Set up your tracker</div>
+      <div class="field-wrap">
+        <label class="field">Daily calorie goal (optional)</label>
+        <input type="number" step="1" id="goalInput" placeholder="2000">
+      </div>
+      <button id="startBtn">Start tracking</button>
+    </div>
+  `;
+}
+
+function attachSetupHandlers() {
+  document.getElementById('startBtn').onclick = async () => {
+    const goal = parseFloat(document.getElementById('goalInput').value) || null;
+    const today = new Date();
+    state = {
+      goal: goal,
+      entries: [],
+      viewMonth: today.getMonth(),
+      viewYear: today.getFullYear()
+    };
+    await save();
+    render();
+  };
+}
+
+function circleProgressSvg(current, goal) {
+  const pct = goal ? Math.min(100, (current / goal) * 100) : 0;
+  const circumference = 2 * Math.PI * 85;
+  const strokeDashoffset = circumference - (pct / 100) * circumference;
+  const isOver = current > goal;
+  const color = isOver ? '#a8543a' : '#5f7a55';
+
+  return `
+    <svg viewBox="0 0 200 200" class="circle-svg">
+      <circle cx="100" cy="100" r="85" fill="none" stroke="#d8d2c0" stroke-width="12"/>
+      <circle cx="100" cy="100" r="85" fill="none" stroke="${color}" stroke-width="12"
+        stroke-dasharray="${circumference}" stroke-dashoffset="${strokeDashoffset}"
+        stroke-linecap="round" style="transform: rotate(-90deg); transform-origin: 50% 50%; transition: stroke-dashoffset 0.3s ease;"/>
+      <text x="100" y="95" text-anchor="middle" font-family="Fraunces, serif" font-size="48" font-weight="500" fill="#23281f">${Math.round(current)}</text>
+      <text x="100" y="125" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="12" fill="#5c6152">${goal ? 'of ' + goal : 'kcal'}</text>
+    </svg>
+  `;
+}
+
+function mainView() {
+  if (!state.viewMonth && state.viewMonth !== 0) state.viewMonth = new Date().getMonth();
+  if (!state.viewYear) state.viewYear = new Date().getFullYear();
+
+  const today = todayStr();
+  const todaysEntries = state.entries.filter(e => e.date === today);
+  const total = todaysEntries.reduce((s, e) => s + e.kcal, 0);
+  const streak = computeCalorieStreak();
+
+  const meals = { Breakfast: 0, Lunch: 0, Dinner: 0, Snacks: 0 };
+  todaysEntries.forEach(e => {
+    if (meals.hasOwnProperty(e.note)) {
+      meals[e.note] += e.kcal;
+    }
+  });
+
+  const rows = [...todaysEntries].reverse().map((e, i) => `
+    <li style="display: flex; justify-content: space-between; align-items: center;">
+      <span class="log-date">${e.note ? escapeHtml(e.note) : 'entry'}</span>
+      <span style="display: flex; gap: 8px; align-items: center;">
+        <span>${e.kcal} kcal</span>
+        <button class="delete-entry" data-index="${todaysEntries.length - 1 - i}" style="width: auto; padding: 4px 8px; font-size: 12px; background: transparent; border: 1px solid var(--rule); color: var(--ink-soft);">×</button>
+      </span>
+    </li>
+  `).join('');
+
+  return `
+    <div class="card">
+      <div class="circle-container">
+        <div>
+          ${state.goal ? circleProgressSvg(total, state.goal) : `<div style="text-align: center; padding: 40px 0;"><div style="font-size: 48px; font-family: Fraunces, serif; font-weight: 500; margin-bottom: 8px;">${total}</div><div style="font-size: 12px; color: var(--ink-soft);">kcal</div></div>`}
+        </div>
+        <div class="circle-breakdown">
+          ${state.goal ? `
+            <div style="font-size: 12px; color: var(--ink-soft); margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--rule);">
+              ${total > state.goal ? `<span style="font-weight: 500; color: var(--rust-deep);">${total - state.goal} over</span>` : `<span style="font-weight: 500; color: var(--sage-deep);">${state.goal - total} left</span>`}
+            </div>
+          ` : ''}
+          <div style="display: flex; flex-direction: column; gap: 10px; font-size: 13px;">
+            <div><span style="color: var(--ink-soft);">BF</span> <span style="font-weight: 500; float: right;">${meals.Breakfast}</span></div>
+            <div><span style="color: var(--ink-soft);">Lunch</span> <span style="font-weight: 500; float: right;">${meals.Lunch}</span></div>
+            <div><span style="color: var(--ink-soft);">Dinner</span> <span style="font-weight: 500; float: right;">${meals.Dinner}</span></div>
+            <div><span style="color: var(--ink-soft);">Snacks</span> <span style="font-weight: 500; float: right;">${meals.Snacks}</span></div>
+          </div>
+        </div>
+      </div>
+      <div style="text-align: center; border-top: 1px solid var(--rule); padding-top: 12px; margin-top: 12px; font-size: 13px;"><span style="font-weight: 500; color: var(--brass-deep);">${streak}d</span> <span style="color: var(--ink-soft);">streak</span></div>
+    </div>
+
+    <div class="card">
+      <div class="label" style="margin-bottom: 10px;">Log entry</div>
+      <div class="field-pair" style="grid-template-columns: 1fr 1fr 1fr;">
+        <input type="number" step="1" id="calorieAmount" placeholder="kcal">
+        <select id="calorieNote">
+          <option value="">— meal —</option>
+          <option value="Breakfast">Breakfast</option>
+          <option value="Lunch">Lunch</option>
+          <option value="Dinner">Dinner</option>
+          <option value="Snacks">Snacks</option>
+        </select>
+        <button id="logBtn" style="width:100%;">Add</button>
+      </div>
+      <div class="err" id="logErr">Enter a calorie amount.</div>
+    </div>
+
+    <div class="card">
+      <div class="label" style="margin-bottom: 6px;">Today's entries</div>
+      ${todaysEntries.length ? `<ul class="log-list">${rows}</ul>` : '<div class="empty">No entries yet today.</div>'}
+    </div>
+
+    <div class="card">
+      <div class="label" style="margin-bottom: 10px;">Monthly overview</div>
+      ${renderMonthCalendar(state.viewYear, state.viewMonth)}
+    </div>
+
+    <button class="secondary" id="resetBtn">Reset tracker</button>
+  `;
+}
+
+function escapeHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function attachMainHandlers() {
+  document.getElementById('logBtn').onclick = async () => {
+    const val = parseFloat(document.getElementById('calorieAmount').value);
+    const note = document.getElementById('calorieNote').value;
+    if (isNaN(val)) {
+      document.getElementById('logErr').style.display = 'block';
+      return;
+    }
+    state.entries.push({ date: todayStr(), kcal: val, note });
+    document.getElementById('calorieAmount').value = '';
+    document.getElementById('calorieNote').value = '';
+    await save();
+    render();
+  };
+  document.getElementById('resetBtn').onclick = async () => {
+    if (confirm('Reset all data? This clears your entries.')) {
+      state = null;
+      await save();
+      render();
+    }
+  };
+  document.querySelectorAll('.delete-entry').forEach(btn => {
+    btn.onclick = async () => {
+      const today = todayStr();
+      const todaysIndices = state.entries
+        .map((e, i) => e.date === today ? i : -1)
+        .filter(i => i !== -1);
+      const indexInToday = parseInt(btn.getAttribute('data-index'));
+      const actualIndex = todaysIndices[indexInToday];
+      state.entries.splice(actualIndex, 1);
+      await save();
+      render();
+    };
+  });
+  const prevBtn = document.getElementById('prevMonthBtn');
+  if (prevBtn) {
+    prevBtn.onclick = async () => {
+      state.viewMonth--;
+      if (state.viewMonth < 0) {
+        state.viewMonth = 11;
+        state.viewYear--;
+      }
+      await save();
+      render();
+    };
+  }
+  const nextBtn = document.getElementById('nextMonthBtn');
+  if (nextBtn) {
+    nextBtn.onclick = async () => {
+      state.viewMonth++;
+      if (state.viewMonth > 11) {
+        state.viewMonth = 0;
+        state.viewYear++;
+      }
+      await save();
+      render();
+    };
+  }
+}
+
+load();
+</script>
+
+</body>
+</html>

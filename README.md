@@ -26,8 +26,9 @@ Just open `index.html` in your browser (double-click it, or `open index.html`). 
 
 ## Features
 
-- Weight tracking with streaks and trend charts
-- Daily calorie counter with optional goals
+- Weight tracking with streaks and trend charts (`index.html`)
+- Gym log with PRs (`gym.html`)
+- Calorie tracker with daily goal, meal breakdown and monthly calendar (`calorie-tracker.html`)
 - Progress toward weight goal as a percentage
 - BMI display (if height provided)
 - All data persists in browser localStorage — no backend
